@@ -91,6 +91,149 @@ O projeto original apresentava segmentation fault devido à incompatibilidade en
 3. **Configurações de ambiente**: Desabilitado logs e otimizações problemáticas
 4. **Versão compatível**: TensorFlow 2.20.0 funcionando corretamente no ambiente virtual
 
+## Exportação do Modelo para C++
+
+### Arquivo do Modelo TensorFlow Lite
+
+O modelo quantizado está disponível como:
+- **Nome do arquivo**: `modelo_quantizado.tflite`
+- **Localização**: `models/modelo_quantizado.tflite`
+- **Tamanho**: Otimizado para dispositivos móveis e embarcados
+
+### Como Usar o Modelo em C++
+
+Para integrar o modelo TensorFlow Lite em um projeto C++, siga estes passos:
+
+#### 1. Configuração do Projeto C++
+
+```cmake
+# CMakeLists.txt
+cmake_minimum_required(VERSION 3.16)
+project(trunk_vehicle_classifier)
+
+set(CMAKE_CXX_STANDARD 17)
+
+# TensorFlow Lite
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(TFLITE REQUIRED tensorflow-lite)
+
+include_directories(${TFLITE_INCLUDE_DIRS})
+link_directories(${TFLITE_LIBRARY_DIRS})
+
+add_executable(trunk_classifier main.cpp)
+target_link_libraries(trunk_classifier ${TFLITE_LIBRARIES})
+```
+
+#### 2. Código C++ de Exemplo
+
+```cpp
+#include "tensorflow/lite/interpreter.h"
+#include "tensorflow/lite/kernels/register.h"
+#include "tensorflow/lite/model.h"
+#include <iostream>
+
+class TrunkVehicleClassifier {
+private:
+    std::unique_ptr<tflite::FlatBufferModel> model;
+    std::unique_ptr<tflite::Interpreter> interpreter;
+    
+public:
+    bool loadModel(const std::string& model_path) {
+        model = tflite::FlatBufferModel::BuildFromFile(model_path.c_str());
+        if (!model) {
+            std::cerr << "Erro ao carregar modelo: " << model_path << std::endl;
+            return false;
+        }
+        
+        tflite::ops::builtin::BuiltinOpResolver resolver;
+        tflite::InterpreterBuilder builder(*model, resolver);
+        builder(&interpreter);
+        
+        if (!interpreter) {
+            std::cerr << "Erro ao criar interpretador" << std::endl;
+            return false;
+        }
+        
+        interpreter->AllocateTensors();
+        return true;
+    }
+    
+    std::string predict(float distance) {
+        // Normalizar entrada (mesmo scaler usado no treinamento)
+        float normalized_distance = (distance - 1000.0f) / 500.0f;
+        
+        // Obter ponteiro para tensor de entrada
+        float* input = interpreter->typed_input_tensor<float>(0);
+        input[0] = normalized_distance;
+        
+        // Executar inferência
+        interpreter->Invoke();
+        
+        // Obter resultados
+        float* output = interpreter->typed_output_tensor<float>(0);
+        
+        // Encontrar classe com maior probabilidade
+        int predicted_class = 0;
+        float max_prob = output[0];
+        
+        for (int i = 1; i < 3; i++) {
+            if (output[i] > max_prob) {
+                max_prob = output[i];
+                predicted_class = i;
+            }
+        }
+        
+        // Mapear classes
+        std::string classes[] = {"CHEIO", "PARCIAL", "VAZIO"};
+        return classes[predicted_class];
+    }
+};
+
+int main() {
+    TrunkVehicleClassifier classifier;
+    
+    if (!classifier.loadModel("modelo_quantizado.tflite")) {
+        return -1;
+    }
+    
+    // Exemplo de uso
+    float distance = 800.0f; // mm
+    std::string prediction = classifier.predict(distance);
+    
+    std::cout << "Distância: " << distance << "mm" << std::endl;
+    std::cout << "Estado previsto: " << prediction << std::endl;
+    
+    return 0;
+}
+```
+
+#### 3. Compilação
+
+```bash
+# Instalar TensorFlow Lite C++
+sudo apt-get install libtensorflow-lite-dev
+
+# Compilar
+mkdir build && cd build
+cmake ..
+make
+```
+
+#### 4. Dependências Necessárias
+
+- **TensorFlow Lite C++**: Biblioteca principal
+- **CMake**: Sistema de build
+- **C++17**: Padrão mínimo
+
+### Características do Modelo Exportado
+
+- **Formato**: TensorFlow Lite (.tflite)
+- **Quantização**: INT8 para otimização de memória
+- **Tamanho**: ~2-5 KB (dependendo da quantização)
+- **Latência**: < 1ms em hardware embarcado
+- **Entrada**: 1 valor float (distância em mm)
+- **Saída**: 3 valores float (probabilidades das classes)
+
 ## Tecnologias Utilizadas
 
 - **TensorFlow 2.20.0**: Framework principal
