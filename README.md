@@ -244,4 +244,29 @@ make
 
 ## Autor
 
+## 🤝 Contribuição
+
+1. Fork o projeto
+2. Crie uma branch para sua feature
+3. Commit suas mudanças
+4. Push para a branch
+5. Abra um Pull Request
+
+
+## 📜 Licença
+Este projeto é licenciado sob os termos da **GNU Affero General Public License v3.0 (AGPL-3.0)**.  
+Veja o arquivo [LICENSE](./LICENSE.txt) para mais detalhes.
+
+## 👨‍💻 Autor
+
+**Jonas Santos da Silva**  
+CEO | CONTADOR | Desenv. de Software | Pesquisador em IA  
+[linkedin.com/in/jonas-ceo](https://linkedin.com/in/jonas-ceo)
+
+## 🙏 Agradecimentos
+
+- TensorFlow/Keras pela framework
+- Comunidade de deep learning
+- Contribuidores e testadores do projeto   
+
 Projeto desenvolvido para classificação do estado do porta-malas de veículos usando aprendizado de máquina.
